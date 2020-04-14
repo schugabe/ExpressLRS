@@ -34,7 +34,7 @@
 #include <Arduino.h>
 #include "../../src/targets.h"
 
-#define FIFO_SIZE 512
+#define FIFO_SIZE 1024
 
 class FIFO
 {

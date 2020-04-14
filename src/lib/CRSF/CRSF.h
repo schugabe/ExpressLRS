@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_task_wdt.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #endif
@@ -16,7 +17,7 @@
 #define PACKED __attribute__((packed))
 
 #define CRSF_RX_BAUDRATE 420000
-#define CRSF_OPENTX_BAUDRATE 400000
+#define CRSF_OPENTX_FAST_BAUDRATE 400000
 #define CRSF_OPENTX_SLOW_BAUDRATE 115200 // Used for QX7 not supporting 400kbps
 #define CRSF_NUM_CHANNELS 16
 #define CRSF_CHANNEL_VALUE_MIN 172
@@ -387,7 +388,8 @@ public:
 
     static bool CRSFstate;
     static bool CRSFstatePrev;
-    static bool IsUARTslowBaudrate;
+    static uint32_t UARTcurrentBaud;
+    static uint32_t UARTrequestedBaud;
 
     static uint32_t lastUARTpktTime;
     static uint32_t UARTwdtLastChecked;
