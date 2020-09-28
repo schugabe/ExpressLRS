@@ -20,13 +20,10 @@ SX1280Driver Radio;
 #include "msptypes.h"
 #include "hwTimer.h"
 #include "LQCALC.h"
+#include "Telemetry.h"
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"
-#endif
-
-#ifdef PLATFORM_STM32
-#include "STM32_UARTinHandler.h"
 #endif
 
 //// CONSTANTS ////
@@ -763,7 +760,5 @@ void loop()
         #endif
     }
 
-    #ifdef PLATFORM_STM32
-    STM32_RX_HandleUARTin();
-    #endif
+    RX_Telemetry();
 }

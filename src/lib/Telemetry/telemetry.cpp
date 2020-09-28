@@ -1,5 +1,6 @@
-#include "CRSF.h"
-#include "targets.h"
+#include "Telemetry.h"
+#include <CRSF.h>
+#include "../../src/targets.h"
 
 extern CRSF crsf;
 
@@ -10,18 +11,20 @@ bool UARTframeActive = false;
 
 uint8_t UARTinBuffer[256];
 
-void STM32_RX_UARTprocessPacket()
+void ProcessTelemetryPacket()
 {
     if (UARTinBuffer[2] == CRSF_FRAMETYPE_COMMAND)
     {
         Serial.println("Got CMD Packet");
-        if (UARTinBuffer[3] == 0x62 && UARTinBuffer[4] == 0x6c)
-        {
-            delay(100);
-            Serial.println("Jumping to Bootloader...");
-            delay(100);
-            HAL_NVIC_SystemReset();
-        }
+        #ifdef PLATFORM_STM32
+            if (UARTinBuffer[3] == 0x62 && UARTinBuffer[4] == 0x6c)
+            {
+                delay(100);
+                Serial.println("Jumping to Bootloader...");
+                delay(100);
+                HAL_NVIC_SystemReset();
+            }
+        #endif
     }
 
     if (UARTinBuffer[2] == CRSF_FRAMETYPE_BATTERY_SENSOR)
@@ -33,7 +36,7 @@ void STM32_RX_UARTprocessPacket()
     }
 }
 
-void STM32_RX_HandleUARTin()
+void RX_Telemetry()
 {
     while (Serial.available())
     {
@@ -80,7 +83,7 @@ void STM32_RX_HandleUARTin()
 
             if (CalculatedCRC == inChar)
             {
-                STM32_RX_UARTprocessPacket();
+                ProcessTelemetryPacket();
 
                 UARTinPacketPtr = 0;
                 UARTframeActive = false;
