@@ -20,7 +20,7 @@ SX1280Driver Radio;
 #include "msptypes.h"
 #include "hwTimer.h"
 #include "LQCALC.h"
-#include "Telemetry.h"
+#include <Telemetry.h>
 
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_WebUpdate.h"

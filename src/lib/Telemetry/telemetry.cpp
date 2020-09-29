@@ -6,7 +6,8 @@ extern CRSF crsf;
 
 uint8_t UARTinPacketPtr;
 uint8_t UARTinPacketLen;
-uint32_t UARTLastDataTime;
+uint32_t UARTinLastDataTime;
+uint32_t UARTinLastPacketTime;
 bool UARTframeActive = false;
 
 uint8_t UARTinBuffer[256];
@@ -40,76 +41,73 @@ void RX_Telemetry()
 {
     while (Serial.available())
     {
-        UARTLastDataTime = millis();
+        UARTinLastDataTime = millis();
         char inChar = Serial.read();
 
-        if ((inChar == CRSF_ADDRESS_CRSF_RECEIVER || inChar == CRSF_SYNC_BYTE) && UARTframeActive == false) // we got sync, reset write pointer
+        if (UARTframeActive == false)
         {
-            UARTinPacketPtr = 0;
-            UARTframeActive = true;
-        }
-
-        if (UARTinPacketPtr == 1 && UARTframeActive == true) // we read the packet length and save it
-        {
-            UARTinPacketLen = inChar;
-            UARTframeActive = true;
-        }
-
-        if (UARTframeActive && UARTinPacketPtr > 0) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
-        {
-            if (UARTinPacketPtr > UARTinPacketLen + 2)
+            // stage 1 wait for sync byte //
+            if (inChar == CRSF_ADDRESS_CRSF_TRANSMITTER || inChar == CRSF_SYNC_BYTE) // we got sync, reset write pointer
             {
                 UARTinPacketPtr = 0;
-                UARTframeActive = false;
-                while (Serial.available())
-                {
-                    Serial.read();
-                }
-                Serial.flush();
+                UARTinPacketLen = 0;
+                UARTframeActive = true;
+                UARTinBuffer[UARTinPacketPtr] = inChar;
+                UARTinPacketPtr++;
             }
         }
-
-        if (UARTinPacketPtr == 64) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
+        else // frame is active so we do the processing
         {
-            UARTinPacketPtr = 0;
-        }
-
-        UARTinBuffer[UARTinPacketPtr] = inChar;
-        UARTinPacketPtr++;
-
-        if (UARTinPacketPtr == UARTinPacketLen + 2) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
-        {
-            char CalculatedCRC = CalcCRC((uint8_t *)UARTinBuffer + 2, UARTinPacketPtr - 3);
-
-            if (CalculatedCRC == inChar)
+            // first if things have gone wrong //
+            if (UARTinPacketPtr > CRSF_MAX_PACKET_LEN - 1) // we reached the maximum allowable packet length, so start again because shit fucked up hey.
             {
-                ProcessTelemetryPacket();
-
                 UARTinPacketPtr = 0;
+                UARTinPacketLen = 0;
                 UARTframeActive = false;
+                return;
             }
-            else
+            // special case where we save the expected pkt len to buffer //
+            if (UARTinPacketPtr == 1)
             {
-                //Serial.println("UART CRC failure");
-                //Serial.println(UARTinPacketPtr, HEX);
-                //Serial.print("Expected: ");
-                //Serial.println(CalculatedCRC, HEX);
-                //Serial.print("Got: ");
-                //Serial.println(inChar, HEX);
-                //for (int i = 0; i < UARTinPacketPtr + 2; i++)
-                // {
-                //Serial.print(UARTinBuffer[i], HEX);
-                //    Serial.print(" ");
-                //}
-                //Serial.println();
-                //Serial.println();
-                UARTframeActive = false;
-                UARTinPacketPtr = 0;
-                while (Serial.available())
+                if (inChar <= CRSF_MAX_PACKET_LEN)
                 {
-                    Serial.read(); // dunno why but the flush() method wasn't working
+                    UARTinPacketLen = inChar;
                 }
-                Serial.flush();
+                else
+                {
+                    UARTinPacketPtr = 0;
+                    UARTinPacketLen = 0;
+                    UARTframeActive = false;
+                    return;
+                }
+            }
+
+            UARTinBuffer[UARTinPacketPtr] = inChar;
+            UARTinPacketPtr++;
+
+            if (UARTinPacketPtr == UARTinPacketLen + 2) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
+            {
+                char CalculatedCRC = CalcCRC((uint8_t *)UARTinBuffer + 2, UARTinPacketPtr - 3);
+
+                if (CalculatedCRC == inChar)
+                {
+                    UARTinLastPacketTime = millis();
+                    ProcessTelemetryPacket();
+                    UARTinPacketPtr = 0;
+                    UARTinPacketLen = 0;
+                    UARTframeActive = false;
+                }
+                else
+                {
+                    UARTinPacketPtr = 0;
+                    UARTinPacketLen = 0;
+                    UARTframeActive = false;
+                    Serial.println("UART in CRC failure");
+                    while (Serial.available())
+                    {
+                        Serial.read(); // empty the read buffer
+                    }
+                }
             }
         }
     }
