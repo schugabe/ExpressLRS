@@ -4,7 +4,7 @@ SX127xHal *SX127xHal::instance = NULL;
 
 volatile SX127x_InterruptAssignment SX127xHal::InterruptAssignment = SX127x_INTERRUPT_NONE;
 
-void inline SX127xHal::nullCallback(void) { return; };
+void inline SX127xHal::nullCallback(void) { return; }
 void (*SX127xHal::TXdoneCallback)() = &nullCallback;
 void (*SX127xHal::RXdoneCallback)() = &nullCallback;
 
@@ -98,7 +98,7 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::getRegValue(uint8_t reg, uint8_t msb, uint8_t
 
 void ICACHE_RAM_ATTR SX127xHal::readRegisterBurst(uint8_t reg, uint8_t numBytes, uint8_t *inBytes)
 {
-  WORD_ALIGNED_ATTR uint8_t buf[numBytes + 1];
+  WORD_ALIGNED_ATTR uint8_t *buf = new uint8_t[numBytes + 1];
   buf[0] = reg | SPI_READ;
 
   digitalWrite(GPIO_PIN_NSS, LOW);
@@ -106,6 +106,8 @@ void ICACHE_RAM_ATTR SX127xHal::readRegisterBurst(uint8_t reg, uint8_t numBytes,
   digitalWrite(GPIO_PIN_NSS, HIGH);
 
   memcpy(inBytes, buf + 1, numBytes);
+
+  delete [] buf;
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg)
@@ -137,7 +139,7 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::setRegValue(uint8_t reg, uint8_t value, uint8
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegisterFIFO(volatile uint8_t *data, uint8_t numBytes)
 {
-  WORD_ALIGNED_ATTR uint8_t buf[numBytes + 1];
+  WORD_ALIGNED_ATTR uint8_t *buf = new uint8_t[numBytes + 1];
   buf[0] = (SX127X_REG_FIFO | SPI_WRITE);
 
   for (int i = 0; i < numBytes; i++) // todo check if this is the right want to handle volatiles
@@ -152,11 +154,12 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegisterFIFO(volatile uint8_t *data, uint8_
   SPI.writeBytes(buf, numBytes + 1);
 #endif
   digitalWrite(GPIO_PIN_NSS, HIGH);
+  delete [] buf;
 }
 
 void ICACHE_RAM_ATTR SX127xHal::readRegisterFIFO(volatile uint8_t *data, uint8_t numBytes)
 {
-  WORD_ALIGNED_ATTR uint8_t buf[numBytes + 1];
+  WORD_ALIGNED_ATTR uint8_t *buf = new uint8_t[numBytes + 1];
   buf[0] = SX127X_REG_FIFO | SPI_READ;
 
   digitalWrite(GPIO_PIN_NSS, LOW);
@@ -167,11 +170,12 @@ void ICACHE_RAM_ATTR SX127xHal::readRegisterFIFO(volatile uint8_t *data, uint8_t
   {
     data[i] = buf[i + 1];
   }
+  delete [] buf;
 }
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegisterBurst(uint8_t reg, uint8_t *data, uint8_t numBytes)
 {
-  WORD_ALIGNED_ATTR uint8_t buf[numBytes + 1];
+  WORD_ALIGNED_ATTR uint8_t *buf = new uint8_t[numBytes + 1];
   buf[0] = reg | SPI_WRITE;
   memcpy(buf + 1,  data, numBytes);
 
@@ -182,6 +186,7 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegisterBurst(uint8_t reg, uint8_t *data, u
   SPI.writeBytes(buf, numBytes + 1);
 #endif
   digitalWrite(GPIO_PIN_NSS, HIGH);
+  delete [] buf;
 }
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data)

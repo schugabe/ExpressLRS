@@ -399,9 +399,9 @@ void ICACHE_RAM_ATTR RadioUARTconnected()
   for (int i = 0; i < 3; i++) // sometimes OpenTX ignores our packets (not sure why yet...)
   {
     uint8_t LUAdisableWebupdate[4] = {0xFE, 0x00, 0x00, 0x00};
-    crsf.sendLUAresponse(LUAdisableWebupdate);
+    crsf.sendLUAresponse(LUAdisableWebupdate, 4);
     uint8_t LUAbindDone[4] = {0xFF, 0x00, 0x00, 0x00};
-    crsf.sendLUAresponse(LUAbindDone);
+    crsf.sendLUAresponse(LUAbindDone, 4);
   }
 }
 
@@ -426,8 +426,8 @@ void HandleUpdateParameter()
   {
   case 0: // send all params
     Serial.println("send all lua params");
-    crsf.sendLUAresponse(luaCommitPacket);
-    crsf.sendLUAresponse(luaCommitOtherHalfPacket);
+    crsf.sendLUAresponse(luaCommitPacket, 4);
+    crsf.sendLUAresponse(luaCommitOtherHalfPacket, 4);
     break;
 
   case 1:
@@ -488,7 +488,7 @@ void HandleUpdateParameter()
     {
 #ifdef PLATFORM_ESP32
       uint8_t LUAdisableWebupdate[4] = {0xFE, 0x01, 0x00, 0x00};
-      crsf.sendLUAresponse(LUAdisableWebupdate); // send this to confirm
+      crsf.sendLUAresponse(LUAdisableWebupdate, 4); // send this to confirm
       delay(500);
       Serial.println("Wifi Update Mode Requested!");
       webUpdateMode = true;
@@ -496,7 +496,7 @@ void HandleUpdateParameter()
       return; // no need to do anything else
 #else
       uint8_t LUAdisableWebupdate[4] = {0xFE, 0x00, 0x00, 0x00};
-      crsf.sendLUAresponse(LUAdisableWebupdate); // send this to confirm
+      crsf.sendLUAresponse(LUAdisableWebupdate, 4); // send this to confirm
       Serial.println("Wifi Update Mode Requested but not supported on this platform!");
 #endif
       break;
@@ -507,7 +507,7 @@ void HandleUpdateParameter()
     {
       Serial.println("Binding Requested!");
       uint8_t luaBindingRequestedPacket[] = {(uint8_t)0xFF, (uint8_t)0x01, (uint8_t)0x00, (uint8_t)0x00};
-      crsf.sendLUAresponse(luaBindingRequestedPacket);
+      crsf.sendLUAresponse(luaBindingRequestedPacket, 4);
 
       //crsf.sendLUAresponse((uint8_t)0xFF, (uint8_t)0x00, (uint8_t)0x00, (uint8_t)0x00); // send this to confirm binding is done
     }
@@ -518,8 +518,8 @@ void HandleUpdateParameter()
   }
 
   UpdateParamReq = false;
-  uint8_t luaCurrParams[] = {ExpressLRS_currAirRate_Modparams->enum_rate + 3, ExpressLRS_currAirRate_Modparams->TLMinterval + 1, POWERMGNT.currPower() + 2, Regulatory_Domain_Index};
-  crsf.sendLUAresponse(luaCurrParams);
+  uint8_t luaCurrParams[] = {(uint8_t)(ExpressLRS_currAirRate_Modparams->enum_rate + 3), (uint8_t)(ExpressLRS_currAirRate_Modparams->TLMinterval + 1), (uint8_t)(POWERMGNT.currPower() + 2), Regulatory_Domain_Index};
+  crsf.sendLUAresponse(luaCurrParams, 4);
 }
 
 void ICACHE_RAM_ATTR RXdoneISR()
@@ -771,7 +771,7 @@ void OnTxPowerPacket(mspPacket_t *packet)
 void OnTLMRatePacket(mspPacket_t *packet)
 {
   // Parse the TLM rate
-  uint8_t tlmRate = packet->readByte();
+  //uint8_t tlmRate = packet->readByte();
   CHECK_PACKET_PARSING();
 
   // TODO: Implement dynamic TLM rates

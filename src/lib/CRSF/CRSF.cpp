@@ -35,7 +35,7 @@ uint8_t CRSF::CSFR_RXpin_Module = GPIO_PIN_RCSIGNAL_RX; // Same pin for RX/TX
 volatile bool CRSF::ignoreSerialData = false;
 volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
 
-void inline CRSF::nullCallback(void){};
+void inline CRSF::nullCallback(void) {}
 
 void (*CRSF::RCdataCallback1)() = &nullCallback; // null placeholder callback
 void (*CRSF::RCdataCallback2)() = &nullCallback; // null placeholder callback
@@ -199,12 +199,12 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val[])
+void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val[], uint8_t dataLength)
 {
-    uint8_t dataLength = sizeof(val);
     uint8_t LUArespLength = dataLength + 2;
 
-    uint8_t outBuffer[LUArespLength + 4] = {0};
+    uint8_t *outBuffer = new uint8_t[LUArespLength + 4];
+    memset(outBuffer, 0 ,LUArespLength + 4);
 
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[1] = LUArespLength + 2;
@@ -233,6 +233,8 @@ void ICACHE_RAM_ATTR CRSF::sendLUAresponse(uint8_t val[])
         portEXIT_CRITICAL(&FIFOmux);
 #endif
     }
+
+    delete [] outBuffer;
 }
 
 void ICACHE_RAM_ATTR CRSF::sendLinkBattSensorToTX()
@@ -287,7 +289,7 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
 {
     CRSF::OpenTXsyncOffset = micros() - CRSF::RCdataLastRecv;
 
-    if (CRSF::OpenTXsyncOffset > CRSF::RequestedRCpacketInterval) // detect overrun case when the packet arrives too late and caculate negative offsets.
+    if (CRSF::OpenTXsyncOffset > (int32_t)CRSF::RequestedRCpacketInterval) // detect overrun case when the packet arrives too late and caculate negative offsets.
     {
         CRSF::OpenTXsyncOffset = -(CRSF::OpenTXsyncOffset % CRSF::RequestedRCpacketInterval);
 #ifdef FEATURE_OPENTX_SYNC_AUTOTUNE
@@ -384,10 +386,11 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                 {
                     noInterrupts();
                     uint8_t OutPktLen = SerialOutFIFO.pop();
-                    uint8_t OutData[OutPktLen];
+                    uint8_t *OutData = new uint8_t[OutPktLen];
                     SerialOutFIFO.popBytes(OutData, OutPktLen);
                     interrupts();
                     this->_dev->write(OutData, OutPktLen); // write the packet out
+                    delete [] OutData;
                     return true;
                 }
             }
@@ -849,12 +852,13 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX(void *pvParameters) // in values i
                         digitalWrite(BUFFER_OE, HIGH);
 
                         uint8_t OutPktLen = SerialOutFIFO.pop();
-                        uint8_t OutData[OutPktLen];
+                        uint8_t *OutData = new uint8_t[OutPktLen];
 
                         SerialOutFIFO.popBytes(OutData, OutPktLen);
                         CRSF::Port.write(OutData, OutPktLen); // write the packet out
                         CRSF::Port.flush();
                         digitalWrite(BUFFER_OE, LOW);
+                        delete [] OutData;
                     }
                 }
             }

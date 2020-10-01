@@ -22,7 +22,7 @@ Modified and adapted by Alessandro Carcione for ELRS project
 
 SX1280Hal *SX1280Hal::instance = NULL;
 
-void ICACHE_RAM_ATTR SX1280Hal::nullCallback(void){};
+void ICACHE_RAM_ATTR SX1280Hal::nullCallback(void) {}
 
 void (*SX1280Hal::TXdoneCallback)() = &nullCallback;
 void (*SX1280Hal::RXdoneCallback)() = &nullCallback;
@@ -135,7 +135,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 1];
+    WORD_ALIGNED_ATTR uint8_t *OutBuffer = new uint8_t[size + 1];
 
     OutBuffer[0] = (uint8_t)command;
     memcpy(OutBuffer + 1, buffer, size);
@@ -144,11 +144,13 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     digitalWrite(GPIO_PIN_NSS, LOW);
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
+
+    delete [] OutBuffer;
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2];
+    WORD_ALIGNED_ATTR uint8_t *OutBuffer = new uint8_t[size + 2];
     #define RADIO_GET_STATUS_BUF_SIZEOF 3 // special case for command == SX1280_RADIO_GET_STATUS, fixed 3 bytes packet size
 
     WaitOnBusy();
@@ -171,11 +173,12 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
         memcpy(buffer, OutBuffer + 2, size);
     }
     digitalWrite(GPIO_PIN_NSS, HIGH);
+    delete [] OutBuffer;
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3];
+    WORD_ALIGNED_ATTR uint8_t *OutBuffer = new uint8_t[size + 3];
 
     OutBuffer[0] = (SX1280_RADIO_WRITE_REGISTER);
     OutBuffer[1] = ((address & 0xFF00) >> 8);
@@ -187,6 +190,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
     digitalWrite(GPIO_PIN_NSS, LOW);
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
+    delete [] OutBuffer;
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t value)
@@ -196,7 +200,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t value)
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, uint8_t size)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 4];
+    WORD_ALIGNED_ATTR uint8_t *OutBuffer = new uint8_t[size + 4];
 
     OutBuffer[0] = (SX1280_RADIO_READ_REGISTER);
     OutBuffer[1] = ((address & 0xFF00) >> 8);
@@ -211,6 +215,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, 
     memcpy(buffer, OutBuffer + 4, size);
 
     digitalWrite(GPIO_PIN_NSS, HIGH);
+    delete [] OutBuffer;
 }
 
 uint8_t ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address)
@@ -222,14 +227,14 @@ uint8_t ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address)
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size)
 {
-    uint8_t localbuf[size];
+    uint8_t *localbuf = new uint8_t[size];
 
     for (int i = 0; i < size; i++) // todo check if this is the right want to handle volatiles
     {
         localbuf[i] = buffer[i];
     }
 
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2];
+    WORD_ALIGNED_ATTR uint8_t *OutBuffer = new uint8_t[size + 2];
 
     OutBuffer[0] = SX1280_RADIO_WRITE_BUFFER;
     OutBuffer[1] = offset;
@@ -241,12 +246,14 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, volatile uint8_t *bu
     digitalWrite(GPIO_PIN_NSS, LOW);
     SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     digitalWrite(GPIO_PIN_NSS, HIGH);
+    delete [] OutBuffer;
+    delete [] localbuf;
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3];
-    uint8_t localbuf[size];
+    WORD_ALIGNED_ATTR uint8_t *OutBuffer = new uint8_t[size + 3];
+    uint8_t *localbuf = new uint8_t[size];
 
     OutBuffer[0] = SX1280_RADIO_READ_BUFFER;
     OutBuffer[1] = offset;
@@ -265,6 +272,9 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
     {
         buffer[i] = localbuf[i];
     }
+
+    delete [] localbuf;
+    delete [] OutBuffer;
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
