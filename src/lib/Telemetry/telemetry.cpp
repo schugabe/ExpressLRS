@@ -111,12 +111,18 @@ uint8_t Telemetry::ReceivedPackagesCount()
     return receivedPackages;
 }
 
+uint8_t Telemetry::GetCrcErrorCount()
+{
+    return crcErrorCount;
+}
+
 void Telemetry::ResetState()
 {
     telemetry_state = TELEMETRY_IDLE;
     currentTelemetryByte = 0;
     currentPayloadIndex = 0;
     receivedPackages = 0;
+    crcErrorCount = 0;
 
     uint8_t offset = 0;
 
@@ -178,6 +184,11 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                     receivedPackages++;
                     return true;
                 }
+                else
+                {
+                    crcErrorCount++;
+                }
+
                 #if defined(UNIT_TEST)
                 if (data != crc)
                 {

@@ -59,6 +59,7 @@ public:
     uint8_t UpdatedPayloadCount();
     uint8_t ReceivedPackagesCount();
     bool AppendTelemetryPackage(uint8_t *package);
+    uint8_t GetCrcErrorCount();
 private:
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
     uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
@@ -72,4 +73,5 @@ private:
     bool callUpdateModelMatch;
     bool sendDeviceFrame;
     uint8_t modelMatchId;
+    uint8_t crcErrorCount;
 };

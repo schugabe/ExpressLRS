@@ -660,9 +660,23 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
                 if (MspData[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_DEVICE_PING)
                 {
                     uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-                    crsf.GetDeviceInformation(deviceInformation, 0);
+                    crsf.GetDeviceInformation(deviceInformation, 1);
                     crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
                     telemetry.AppendTelemetryPackage(deviceInformation);
+                }
+                else if (MspData[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_PARAMETER_READ)
+                {
+                    uint8ParameterPacket_t rxResponse;
+                    memset(&rxResponse, 0, sizeof(uint8ParameterPacket_t));
+                    DBGLN("param read from %u param %u", MspData[4], MspData[5]);
+                    rxResponse.parameter.parameterNumber = MspData[5];
+                    rxResponse.value = telemetry.GetCrcErrorCount();
+                    rxResponse.max = 255;
+                    rxResponse.parameter.parameterName1 = 'C';
+                    rxResponse.parameter.parameterName2 = 'R';
+                    rxResponse.parameter.parameterName3 = 'C';
+                    crsf.SetExtendedHeaderAndCrc((uint8_t*)&rxResponse, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, sizeof(uint8ParameterPacket_t), CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+                    telemetry.AppendTelemetryPackage((uint8_t*)&rxResponse);
                 }
             }
         }

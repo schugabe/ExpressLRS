@@ -249,6 +249,31 @@ typedef struct deviceInformationPacket_s
 #define DEVICE_INFORMATION_LENGTH (sizeof(crsf_ext_header_t) + DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_CRC_SIZE)
 #define DEVICE_INFORMATION_FRAME_SIZE (DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 
+typedef struct parameterPacket_s
+{
+    crsf_ext_header_t header;
+    uint8_t parameterNumber;
+    uint8_t parameterChunksRemaining;
+    uint8_t folder;
+    crsf_value_type_e type;
+    uint8_t parameterName1;
+    uint8_t parameterName2;
+    uint8_t parameterName3;
+    uint8_t parameterNameEnd;
+} PACKED parameterPacket_t;
+
+typedef struct uint8ParameterPacket_s
+{
+    parameterPacket_s parameter;
+    uint8_t value;
+    uint8_t min;
+    uint8_t max;
+    uint8_t defaultValue;
+    uint8_t unit;
+    uint8_t crc;
+} PACKED uint8ParameterPacket_t;
+
+
 /**
  * Union to allow accessing the input buffer as different data shapes
  * without generating compiler warnings (and relying on undefined C++ behaviour!)
