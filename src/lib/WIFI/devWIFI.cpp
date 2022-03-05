@@ -24,6 +24,7 @@
 #include "logging.h"
 #include "options.h"
 #include "helpers.h"
+#include "wifiJoystick.h"
 
 #include "WebContent.h"
 
@@ -68,6 +69,10 @@ static String target_found;
 static bool target_complete = false;
 static bool force_update = false;
 static uint32_t totalSize;
+
+#if defined(HAS_WIFI_JOYSTICK)
+static WifiJoystick wifiJoystick(JOYSTICK_PORT);
+#endif
 
 /** Is this an IP? */
 static boolean isIp(String str)
@@ -364,6 +369,11 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
 static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
   if (index == 0) {
     DBGLN("Update: %s", filename.c_str());
+
+    #if defined(HAS_WIFI_JOYSTICK)
+      wifiJoystick.StopJoystickService();
+    #endif
+
     #if defined(PLATFORM_ESP8266)
     Update.runAsync(true);
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
@@ -560,6 +570,11 @@ static void startMDNS()
   #else
     MDNS.setInstanceName(instance);
     MDNS.addService("http", "tcp", 80);
+
+    #if defined(HAS_WIFI_JOYSTICK)
+        MDNS.addService("joystick", "udp", JOYSTICK_PORT);
+    #endif
+
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
     MDNS.addServiceTxt("http", "tcp", "device", device_name);
@@ -619,6 +634,10 @@ static void startServices()
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
 
   startMDNS();
+
+  #if defined(HAS_WIFI_JOYSTICK)
+    wifiJoystick.StartJoystickService();
+  #endif
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
@@ -687,6 +706,11 @@ static void HandleWebUpdate()
   if (servicesStarted)
   {
     dnsServer.processNextRequest();
+
+    #if defined(HAS_WIFI_JOYSTICK)
+        wifiJoystick.Update();
+    #endif
+
     #if defined(PLATFORM_ESP8266)
       MDNS.update();
     #endif
