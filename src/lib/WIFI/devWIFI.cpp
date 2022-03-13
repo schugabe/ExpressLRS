@@ -70,10 +70,6 @@ static bool target_complete = false;
 static bool force_update = false;
 static uint32_t totalSize;
 
-#if defined(HAS_WIFI_JOYSTICK)
-static WifiJoystick wifiJoystick(JOYSTICK_PORT);
-#endif
-
 /** Is this an IP? */
 static boolean isIp(String str)
 {
@@ -371,7 +367,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
     DBGLN("Update: %s", filename.c_str());
 
     #if defined(HAS_WIFI_JOYSTICK)
-      wifiJoystick.StopJoystickService();
+      WifiJoystick::StopJoystickService();
     #endif
 
     #if defined(PLATFORM_ESP8266)
@@ -636,7 +632,7 @@ static void startServices()
   startMDNS();
 
   #if defined(HAS_WIFI_JOYSTICK)
-    wifiJoystick.StartJoystickService();
+    WifiJoystick::StartJoystickService();
   #endif
 
   servicesStarted = true;
@@ -708,7 +704,10 @@ static void HandleWebUpdate()
     dnsServer.processNextRequest();
 
     #if defined(HAS_WIFI_JOYSTICK)
-        wifiJoystick.Update();
+        if (WifiJoystick::CheckForConnection())
+        {
+            server.end();
+        }
     #endif
 
     #if defined(PLATFORM_ESP8266)

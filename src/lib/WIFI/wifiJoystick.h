@@ -5,30 +5,23 @@
 #include <WiFiUdp.h>
 
 #define HAS_WIFI_JOYSTICK 1
-
-#define SEND_TIMEOUT_MS 20000
-#define MAX_MESSAGES_BETWEEN_PING 1000
 #define JOYSTICK_PORT 11000
 
 class WifiJoystick
 {
 public:
-    WifiJoystick(int port);
-    void StartJoystickService();
-    void StopJoystickService();
-    void Update();
-
+    static void StartJoystickService();
+    static void StopJoystickService();
+    static bool CheckForConnection();
+    static void UpdateValues();
 private:
-    bool IsValidRequest(char *buffer);
-    void SendMessage();
+    static bool IsValidRequest(char *buffer);
 
-    bool running;
-    uint16_t messagesUntilTimeout;
-    uint32_t lastMessageSent;
-    WiFiUDP udp;
-    IPAddress remoteIP;
-    int remotePort;
-    int listPort;
+    static bool running;
+    static bool changedSettings;
+    static WiFiUDP udp;
+    static IPAddress remoteIP;
+    static int remotePort;
 };
 
 #endif
