@@ -447,6 +447,20 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   }
 }
 
+#if defined(HAS_WIFI_JOYSTICK)
+
+static void WebUStartWifiJoystick(AsyncWebServerRequest *request)
+{
+  if(request->hasArg("start"))
+  {
+    uint32_t updateInterval = request->hasArg("updateInterval") ? request->arg("updateInterval").toInt() : JOYSTICK_DEFAULT_UPDATE_INTERVAL;
+    WifiJoystick::StartSending(request->client()->remoteIP(), updateInterval);
+    request->send(200, "text/plain", "UDP messages starting: " + request->client()->remoteIP().toString());
+  }
+}
+
+#endif
+
 static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
 {
   uint8_t *dst;
@@ -614,6 +628,10 @@ static void startServices()
 
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
+
+  #if defined(HAS_WIFI_JOYSTICK)
+    server.on("/start_udp_msgs", WebUStartWifiJoystick);
+  #endif
 
   #if defined(TARGET_RX)
     server.on("/model", WebUpdateModelId);

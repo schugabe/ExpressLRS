@@ -15,57 +15,60 @@ extern SX1280Driver Radio;
 #endif
 
 bool WifiJoystick::running = false;
-bool WifiJoystick::changedSettings = false;
-WiFiUDP WifiJoystick::udp;
+bool WifiJoystick::startedEvent = false;
+WiFiUDP *WifiJoystick::udp = NULL;
 IPAddress WifiJoystick::remoteIP;
-int WifiJoystick::remotePort;
 
 void WifiJoystick::StartJoystickService()
 {
-    running = udp.begin(JOYSTICK_PORT) > 0;
+    if (running)
+    {
+        return;
+    }
+    if (!udp)
+    {
+        udp = new WiFiUDP();
+    }
+
+    running = udp->begin(JOYSTICK_PORT) > 0;
 }
 
 void WifiJoystick::StopJoystickService()
 {
-    udp.stop();
+    udp->stop();
     running = false;
+}
+
+void WifiJoystick::StartSending(IPAddress ip, uint32_t updateInterval)
+{
+    if (!running)
+    {
+        return;
+    }
+
+    remoteIP = ip;
+
+    uint8_t ReplyBuffer[] = "acknowledged";
+    udp->beginPacket(remoteIP, JOYSTICK_PORT);
+    udp->write(ReplyBuffer, sizeof(ReplyBuffer));
+    udp->endPacket();
+
+    hwTimer::updateInterval(updateInterval);
+    CRSF::setSyncParams(updateInterval);
+    CRSF::disableOpentxSync();
+    POWERMGNT::setPower(MinPower);
+    Radio.End();
+    CRSF::RCdataCallback = UpdateValues;
+
+    startedEvent = true;
 }
 
 bool WifiJoystick::CheckForConnection()
 {
-    int packetSize;
-    char packetBuffer[CRSF_MAX_PACKET_LEN];
-
-    if (!running)
+    if (running && startedEvent)
     {
-        return false;
-    }
-
-    packetSize = udp.parsePacket();
-    if (packetSize)
-    {
-        int len = udp.read(packetBuffer, sizeof(packetBuffer));
-        if (len > 0) packetBuffer[len-1] = 0;
-
-        if (IsValidRequest(packetBuffer))
-        {
-            remoteIP = udp.remoteIP();
-            remotePort = udp.remotePort();
-
-            if (!changedSettings)
-            {
-                changedSettings = true;
-
-                hwTimer::updateInterval(10000);
-                CRSF::setSyncParams(10000);
-                CRSF::disableOpentxSync();
-                POWERMGNT::setPower(MinPower);
-                Radio.End();
-                CRSF::RCdataCallback = UpdateValues;
-
-                return true;
-            }
-        }
+        startedEvent = false;
+        return true;
     }
 
     return false;
@@ -73,35 +76,18 @@ bool WifiJoystick::CheckForConnection()
 
 void WifiJoystick::UpdateValues()
 {
-    static uint32_t counter = 0;
-    static uint32_t lastMessage = 0;
-
-    uint32_t now = micros();
-    uint32_t diff = now - lastMessage;
-
     if (!running)
     {
         return;
     }
 
-    lastMessage = now;
-
     // TODO send as crsf message
-    udp.beginPacket(remoteIP, remotePort);
-    for (uint8_t i = 0; i < 8; i++)
+    udp->beginPacket(remoteIP, JOYSTICK_PORT);
+    for (uint8_t i = 0; i < 16; i++)
     {
-        udp.write((uint8_t*)&CRSF::ChannelDataIn[i], 2);
+        udp->write((uint8_t*)&CRSF::ChannelDataIn[i], 2);
     }
-    udp.write((uint8_t*)&diff, 4);
-    udp.write((uint8_t*)&counter, 4);
-    udp.endPacket();
-    counter++;
-}
-
-bool WifiJoystick::IsValidRequest(char* request)
-{
-    // TODO check if message is a valid crsf ping
-    return true;
+    udp->endPacket();
 }
 
 #endif
