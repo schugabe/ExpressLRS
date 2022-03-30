@@ -454,8 +454,9 @@ static void WebUStartWifiJoystick(AsyncWebServerRequest *request)
   if(request->hasArg("start"))
   {
     uint32_t updateInterval = request->hasArg("updateInterval") ? request->arg("updateInterval").toInt() : JOYSTICK_DEFAULT_UPDATE_INTERVAL;
-    WifiJoystick::StartSending(request->client()->remoteIP(), updateInterval);
-    request->send(200, "text/plain", "UDP messages starting: " + request->client()->remoteIP().toString());
+    uint32_t channelCount = request->hasArg("channels") ? request->arg("channels").toInt() : JOYSTICK_DEFAULT_CHANNEL_COUNT;
+    WifiJoystick::StartSending(request->client()->remoteIP(), updateInterval, channelCount);
+    request->send(200, "text/plain", "ok");
   }
 }
 
@@ -582,7 +583,7 @@ static void startMDNS()
     MDNS.addService("http", "tcp", 80);
 
     #if defined(HAS_WIFI_JOYSTICK)
-        MDNS.addService("joystick", "udp", JOYSTICK_PORT);
+        MDNS.addService("elrs-joystick", "udp", JOYSTICK_PORT);
     #endif
 
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
@@ -630,7 +631,7 @@ static void startServices()
   server.on("/forceupdate", WebUploadForceUpdateHandler);
 
   #if defined(HAS_WIFI_JOYSTICK)
-    server.on("/start_udp_msgs", WebUStartWifiJoystick);
+    server.on("/wifi_joystick", WebUStartWifiJoystick);
   #endif
 
   #if defined(TARGET_RX)

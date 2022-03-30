@@ -14,58 +14,53 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-bool WifiJoystick::running = false;
 bool WifiJoystick::startedEvent = false;
 WiFiUDP *WifiJoystick::udp = NULL;
 IPAddress WifiJoystick::remoteIP;
+uint8_t WifiJoystick::channelCount = JOYSTICK_DEFAULT_CHANNEL_COUNT;
 
 void WifiJoystick::StartJoystickService()
 {
-    if (running)
-    {
-        return;
-    }
     if (!udp)
     {
         udp = new WiFiUDP();
+        udp->begin(JOYSTICK_PORT);
     }
-
-    running = udp->begin(JOYSTICK_PORT) > 0;
 }
 
 void WifiJoystick::StopJoystickService()
 {
     udp->stop();
-    running = false;
+    delete udp;
+    udp = NULL;
 }
 
-void WifiJoystick::StartSending(IPAddress ip, uint32_t updateInterval)
+void WifiJoystick::StartSending(IPAddress ip, uint32_t updateInterval, uint8_t newChannelCount)
 {
-    if (!running)
+    if (!udp)
     {
         return;
     }
 
     remoteIP = ip;
 
-    uint8_t ReplyBuffer[] = "acknowledged";
-    udp->beginPacket(remoteIP, JOYSTICK_PORT);
-    udp->write(ReplyBuffer, sizeof(ReplyBuffer));
-    udp->endPacket();
-
     hwTimer::updateInterval(updateInterval);
     CRSF::setSyncParams(updateInterval);
-    CRSF::disableOpentxSync();
     POWERMGNT::setPower(MinPower);
     Radio.End();
     CRSF::RCdataCallback = UpdateValues;
+    channelCount = newChannelCount;
 
-    startedEvent = true;
+    if (channelCount > 16) {
+        channelCount = 16;
+    }
+
+    startedEvent = false;
 }
 
 bool WifiJoystick::CheckForConnection()
 {
-    if (running && startedEvent)
+    if (udp && startedEvent)
     {
         startedEvent = false;
         return true;
@@ -76,14 +71,13 @@ bool WifiJoystick::CheckForConnection()
 
 void WifiJoystick::UpdateValues()
 {
-    if (!running)
+    if (!udp)
     {
         return;
     }
 
-    // TODO send as crsf message
     udp->beginPacket(remoteIP, JOYSTICK_PORT);
-    for (uint8_t i = 0; i < 16; i++)
+    for (uint8_t i = 0; i < channelCount; i++)
     {
         udp->write((uint8_t*)&CRSF::ChannelDataIn[i], 2);
     }
