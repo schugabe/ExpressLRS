@@ -723,10 +723,7 @@ static void HandleWebUpdate()
     dnsServer.processNextRequest();
 
     #if defined(HAS_WIFI_JOYSTICK)
-        if (WifiJoystick::CheckForConnection())
-        {
-            server.end();
-        }
+      WifiJoystick::Loop();
     #endif
 
     #if defined(PLATFORM_ESP8266)

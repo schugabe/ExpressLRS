@@ -14,7 +14,6 @@ extern SX127xDriver Radio;
 extern SX1280Driver Radio;
 #endif
 
-bool WifiJoystick::startedEvent = false;
 WiFiUDP *WifiJoystick::udp = NULL;
 IPAddress WifiJoystick::remoteIP;
 uint8_t WifiJoystick::channelCount = JOYSTICK_DEFAULT_CHANNEL_COUNT;
@@ -54,19 +53,14 @@ void WifiJoystick::StartSending(IPAddress ip, uint32_t updateInterval, uint8_t n
     if (channelCount > 16) {
         channelCount = 16;
     }
-
-    startedEvent = false;
 }
 
-bool WifiJoystick::CheckForConnection()
+void WifiJoystick::Loop()
 {
-    if (udp && startedEvent)
+    if (udp)
     {
-        startedEvent = false;
-        return true;
+        udp->flush();
     }
-
-    return false;
 }
 
 void WifiJoystick::UpdateValues()
