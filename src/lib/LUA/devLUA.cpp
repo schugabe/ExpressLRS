@@ -10,6 +10,7 @@
 #include "lua.h"
 #include "OTA.h"
 #include "hwTimer.h"
+#include <WiFi.h>
 
 #if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
 #include "SX127xDriver.h"
@@ -391,7 +392,19 @@ static void registerLuaParameters()
       }
       else
       {
-        sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.step, luaWebUpdate.info);
+
+        static String ssid; 
+        uint8_t mode =  WiFi.getMode();
+        ssid = "";
+        if(mode == 1) {
+            ssid = "SSID " + WiFi.SSID();
+        } else if(mode == 3) { 
+            ssid = "SSID " + WiFi.softAPSSID(); 
+        } else if(mode == 0) {
+            ssid = "Connecting: ";
+        } 
+        sendLuaCommandResponse(&luaWebUpdate, luaWebUpdate.step, ssid.c_str() );
+
       }
     },luaWiFiFolder.common.id);
   #endif

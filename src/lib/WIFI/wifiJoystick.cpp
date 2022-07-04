@@ -57,10 +57,21 @@ void WifiJoystick::StartSending(IPAddress ip, uint32_t updateInterval, uint8_t n
 
 void WifiJoystick::Loop()
 {
-    if (udp)
-    {
+
+   static unsigned long lastBroadcast = 0; 
+   
+   if(udp) 
+   {
+        if(lastBroadcast < millis())
+        {
+            DBGLN("====>> Broadcast: ");  
+            udp->beginPacket("255.255.255.255", 11000);
+            udp->write((uint8_t*)"ELRS_WIFI", 9);
+            udp->endPacket();
+            lastBroadcast = millis() + 5000;
+        }
         udp->flush();
-    }
+   }
 }
 
 void WifiJoystick::UpdateValues()
